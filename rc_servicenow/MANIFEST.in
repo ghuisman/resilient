@@ -1,0 +1,3 @@
+include README.md
+include rc_servicenow/util/*
+include rc_servicenow/LICENSE
