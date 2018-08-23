@@ -73,7 +73,7 @@ class ActionComponent(ResilientComponent):
         }
 
         response = requests.post(self.options.get('url'),
-                                 auth=(self.options.get('username'), self.options.get('password')),
+                                 auth=(self.options.get('user'), self.options.get('password')),
                                  headers=headers,
                                  json=testdata)
 
