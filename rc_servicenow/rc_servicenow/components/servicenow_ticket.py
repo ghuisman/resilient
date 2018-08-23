@@ -34,7 +34,7 @@ class ActionComponent(ResilientComponent):
 
         self.channel = "actions." + self.options.get("queue", "inc_test")
 
-    @handler('create_sn_ticket')
+    @handler('create_ticket')
     def createTicket(self, event, *args, **kwargs):
         """Create function for snow ticket handling.
 
