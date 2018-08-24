@@ -14,7 +14,6 @@ CONFIG_DATA_SECTION : string
 
 import requests
 import logging
-import json
 import uuid
 from circuits.core.handlers import handler
 from resilient_circuits.actions_component import ResilientComponent
@@ -88,11 +87,10 @@ class ActionComponent(ResilientComponent):
         response = response.json()
         LOG.info(response)
 
-        self.rest_client().get_put("/incidents/{}".format(incident['incident']['id']), update_fn)
-
-        if(response['result']['state'] == 'inserted' and 'Incident is created successfully' in response['result']['note']):
+        if response['result']['state'] == 'inserted' and 'Incident is created successfully' in response['result']['note']:
+            self.rest_client().get_put("/incidents/{}".format(incident['incident']['id']), update_fn)
             yield "Ticket has been successfully created."
-        elif('Duplicate' in response['result']['note']):
+        elif(response['result']['state'] == 'error' and 'Duplicate' in response['result']['note']):
             yield "A ticket for this incident already exists."
         elif('No company found for company' in response['result']['note']):
             yield "No company was found for " + incident['incident']['properties']['company_ticket_id']
