@@ -72,19 +72,61 @@ class ActionComponent(ResilientComponent):
             "urgency": incident['incident']['properties']['servicenow_urgency']
         }
 
-        response = requests.post(self.options.get('url'),
-                                 auth=(self.options.get('user'), self.options.get('password')),
-                                 headers=headers,
-                                 json=testdata)
+        try:
+            response = requests.post(self.options.get('url'),
+                                     auth=(self.options.get('user'), self.options.get('password')),
+                                     headers=headers,
+                                     json=testdata)
+        except ValueError as err:
+            print('Something went wrong:', err)
 
         def update_fn(incident):
             incident['properties']['servicenow_ticket_number'] = response['result']['ticket_number']
             incident['properties']['servicenow_reference_number'] = response['result']['reference_number']
             return incident
 
-        print(response.json)
+        LOG.info(response.json)
         response = response.json()
 
         self.rest_client().get_put("/incidents/{}".format(incident['incident']['id']), update_fn)
 
-        yield "Ticket has been successfully created."
+        if(response['result']['state'] == 'inserted' and 'Incident is created successfully' in response['result']['note']):
+            yield "Ticket has been successfully created."
+        elif('Duplicate' in response['result']['note']):
+            yield "A ticket for this incident already exists."
+        elif('No company found for company' in response['result']['note']):
+            yield "No company was found for " + incident['incident']['properties']['company_ticket_id']
+        elif('is not found or inactive' in response['result']['note']):
+            yield "CI " + 'Security Monitoring TS (Model)' + "is not found or inactive."
+
+    @handler('comment_ticket')
+    def commentTicket(self, event, *args, **kwargs):
+
+        if not isinstance(event, ActionMessage):
+            return
+
+        yield "Comment has been successfully added."
+
+    @handler('resolve_ticket')
+    def resolveTicket(self, event, *args, **kwargs):
+
+        if not isinstance(event, ActionMessage):
+            return
+
+        yield "Ticket has been successfully resolved."
+
+    @handler('reopen_ticket')
+    def reopenTicket(self, event, *args, **kwargs):
+
+        if not isinstance(event, ActionMessage):
+            return
+
+        yield "Ticket has been successfully reopened."
+
+    @handler('close_ticket')
+    def closeTicket(self, event, *args, **kwargs):
+
+        if not isinstance(event, ActionMessage):
+            return
+
+        yield "Ticket has been successfully closed."
