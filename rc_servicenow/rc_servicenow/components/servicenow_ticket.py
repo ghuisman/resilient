@@ -64,7 +64,7 @@ class ActionComponent(ResilientComponent):
         testdata = {
             "action": "New",
             "company": incident['incident']['properties']['company_ticket_id'],
-            "reference_number": reference_number,
+            "reference_number": incident['incident']['id'],
             "short_description": 'short description of ticket',
             "description": incident['incident']['description'],
             "ci": 'Security Monitoring TS (Model)',
