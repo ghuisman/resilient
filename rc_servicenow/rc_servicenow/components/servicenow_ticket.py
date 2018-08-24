@@ -85,8 +85,8 @@ class ActionComponent(ResilientComponent):
             incident['properties']['servicenow_reference_number'] = response['result']['reference_number']
             return incident
 
-        LOG.info(response.json)
         response = response.json()
+        LOG.info(response)
 
         self.rest_client().get_put("/incidents/{}".format(incident['incident']['id']), update_fn)
 
