@@ -31,7 +31,7 @@ class ActionComponent(ResilientComponent):
         self.options = opts.get(CONFIG_DATA_SECTION, {})
         LOG.debug(self.options)
 
-        self.channel = "actions." + self.options.get("queue", "inc_test")
+        self.channel = "actions." + self.options.get("queue")
 
     @handler('create_ticket')
     def createTicket(self, event, *args, **kwargs):
@@ -54,8 +54,7 @@ class ActionComponent(ResilientComponent):
 
         incident = event.message
 
-        reference_number = str(uuid.uuid4())
-        #inc_priority = incident['incident']['properties']['priority']
+        reference_number = 'RS1-' + str(incident['incident']['org_id']) + '-' + str(incident['incident']['id'])
 
         headers = {"Content-Type": "application/json",
                    "Accept": "application/json"}
@@ -63,7 +62,7 @@ class ActionComponent(ResilientComponent):
         testdata = {
             "action": "New",
             "company": incident['incident']['properties']['company_ticket_id'],
-            "reference_number": incident['incident']['id'],
+            "reference_number": reference_number,
             "short_description": 'short description of ticket',
             "description": incident['incident']['description'],
             "ci": 'Security Monitoring TS (Model)',
@@ -71,31 +70,33 @@ class ActionComponent(ResilientComponent):
             "urgency": incident['incident']['properties']['servicenow_urgency']
         }
 
-        try:
-            response = requests.post(self.options.get('url'),
-                                     auth=(self.options.get('user'), self.options.get('password')),
-                                     headers=headers,
-                                     json=testdata)
-        except ValueError as err:
-            print('Something went wrong:', err)
-
         def update_fn(incident):
             incident['properties']['servicenow_ticket_number'] = response['result']['ticket_number']
             incident['properties']['servicenow_reference_number'] = response['result']['reference_number']
             return incident
 
-        response = response.json()
-        LOG.info(response)
+        try:
+            response = requests.post(self.options.get('url'),
+                                     auth=(self.options.get('user'), self.options.get('password')),
+                                     headers=headers,
+                                     json=testdata)
 
-        if response['result']['state'] == 'inserted' and 'Incident is created successfully' in response['result']['note']:
-            self.rest_client().get_put("/incidents/{}".format(incident['incident']['id']), update_fn)
-            yield "Ticket has been successfully created."
-        elif(response['result']['state'] == 'error' and 'Duplicate' in response['result']['note']):
-            yield "A ticket for this incident already exists."
-        elif('No company found for company' in response['result']['note']):
-            yield "No company was found for " + incident['incident']['properties']['company_ticket_id']
-        elif('is not found or inactive' in response['result']['note']):
-            yield "CI " + 'Security Monitoring TS (Model)' + "is not found or inactive."
+            response = response.json()
+            LOG.info(response)
+
+            if response['result']['state'] == 'inserted' and 'Incident is created successfully' in response['result']['note']:
+                self.rest_client().get_put("/incidents/{}".format(incident['incident']['id']), update_fn)
+                yield 'Ticket has been successfully created.'
+            elif(response['result']['state'] == 'error' and 'Duplicate' in response['result']['note']):
+                yield 'A ticket for this incident already exists.'
+            elif('No company found for company' in response['result']['note']):
+                yield 'No company was found for ' + incident['incident']['properties']['company_ticket_id']
+            elif('is not found or inactive' in response['result']['note']):
+                yield 'CI ' + 'Security Monitoring TS (Model)' + 'is not found or inactive.'
+
+        except (ValueError, KeyError, TypeError) as err:
+            print(repr(err))
+            return
 
     @handler('comment_ticket')
     def commentTicket(self, event, *args, **kwargs):
