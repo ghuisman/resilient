@@ -11,16 +11,16 @@ LOG : string
 CONFIG_DATA_SECTION : string
     Get config(?)
 """
-
+import re
 import requests
 import logging
-import uuid
 from circuits.core.handlers import handler
 from resilient_circuits.actions_component import ResilientComponent
 from resilient_circuits.actions_component import ActionMessage
 
 LOG = logging.getLogger(__name__)
 CONFIG_DATA_SECTION = 'rc_servicenow'
+TAG_RE = re.compile(r'<[^>]+>')
 
 class ActionComponent(ResilientComponent):
     """Create ServiceNow Ticket."""
@@ -56,6 +56,9 @@ class ActionComponent(ResilientComponent):
 
         reference_number = 'RS1-' + str(incident['incident']['org_id']) + '-' + str(incident['incident']['id'])
 
+        def remove_tags(text):
+            return TAG_RE.sub('', text)
+
         headers = {"Content-Type": "application/json",
                    "Accept": "application/json"}
 
@@ -64,7 +67,7 @@ class ActionComponent(ResilientComponent):
             "company": incident['incident']['properties']['company_ticket_id'],
             "reference_number": reference_number,
             "short_description": 'short description of ticket',
-            "description": incident['incident']['description'],
+            "description": remove_tags(incident['incident']['description']),
             "ci": 'Security Monitoring TS (Model)',
             "impact": incident['incident']['properties']['servicenow_impact'],
             "urgency": incident['incident']['properties']['servicenow_urgency']
